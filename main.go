@@ -24,7 +24,7 @@ var _ = http.NewRequest
 func main() {
 	fmt.Println("Parsing, should take about 1second per line. Sorry, Coinbase rate limite =/")
 	var (
-		from = flag.String("f", "history.csv", "Csv to read from")
+		from = flag.String("f", "fills.csv", "Csv to read from")
 		to   = flag.String("t", "modified.csv", "Csv to write to")
 	)
 
@@ -57,11 +57,16 @@ func main() {
 		}
 		if i == 0 {
 			extra := []string{
-				"usd-amount",
+				// "usd-amount",
 				"usd-price",
 				"price-date",
 			}
-			w.Write(append(rec, extra...))
+			var newtitle []string
+			newtitle = append(newtitle, rec[:6]...)
+			newtitle = append(newtitle, extra[:]...)
+			newtitle = append(newtitle, rec[6:]...)
+
+			w.Write(newtitle)
 			continue
 		}
 		err := w.Write(parseRecord(rec))
@@ -91,14 +96,15 @@ func GetChartRawData(pair string, t time.Time) ([][]json.RawMessage, error) {
 }
 
 func parseRecord(record []string) []string {
-	t := record[1]
-	v := record[2]
-	coin := record[4]
+	t := record[3]
+	v := record[4]
+	coin := record[5]
 
 	value, err := strconv.ParseFloat(v, 64)
 	if err != nil {
 		panic(err)
 	}
+	var _ = value
 
 	ti := parsetime(t)
 	if ti.IsZero() {
@@ -129,13 +135,18 @@ func parseRecord(record []string) []string {
 	candletime := time.Unix(thecandle.Date, 0)
 
 	added := []string{
-		fmt.Sprintf("%f", value*price),
+		//fmt.Sprintf("%f", value*price),
 		fmt.Sprintf("%f", price),
 		fmt.Sprintf("%s", candletime.UTC().Format(requestlayout)),
 	}
 
-	newRecord := append(record, added...)
-	return newRecord
+	newrecord := make([]string, 0)
+
+	newrecord = append(newrecord, record[:6]...)
+	newrecord = append(newrecord, added[:]...)
+	newrecord = append(newrecord, record[6:]...)
+
+	return newrecord
 }
 
 func choosecandle(candles []BasicCandle, near time.Time) BasicCandle {
