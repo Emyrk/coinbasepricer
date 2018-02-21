@@ -57,14 +57,20 @@ func main() {
 		}
 		if i == 0 {
 			extra := []string{
-				// "usd-amount",
 				"usd-price",
+				"usd-total",
 				"price-date",
 			}
 			var newtitle []string
 			newtitle = append(newtitle, rec[:6]...)
 			newtitle = append(newtitle, extra[:]...)
 			newtitle = append(newtitle, rec[6:]...)
+
+			extra = []string{
+				"usd-price",
+				"usd-total",
+			}
+			newtitle = append(newtitle, extra[:]...)
 
 			w.Write(newtitle)
 			continue
@@ -99,12 +105,18 @@ func parseRecord(record []string) []string {
 	t := record[3]
 	v := record[4]
 	coin := record[5]
+	sz := record[8]
 
-	value, err := strconv.ParseFloat(v, 64)
+	size, err := strconv.ParseFloat(v, 64)
 	if err != nil {
 		panic(err)
 	}
-	var _ = value
+
+	sizeback, err := strconv.ParseFloat(sz, 64)
+	if err != nil {
+		panic(err)
+	}
+	var _ = size
 
 	ti := parsetime(t)
 	if ti.IsZero() {
@@ -134,9 +146,10 @@ func parseRecord(record []string) []string {
 	price := thecandle.Close
 	candletime := time.Unix(thecandle.Date, 0)
 
+	cost := size * price
 	added := []string{
-		//fmt.Sprintf("%f", value*price),
 		fmt.Sprintf("%f", price),
+		fmt.Sprintf("%f", cost),
 		fmt.Sprintf("%s", candletime.UTC().Format(requestlayout)),
 	}
 
@@ -145,6 +158,15 @@ func parseRecord(record []string) []string {
 	newrecord = append(newrecord, record[:6]...)
 	newrecord = append(newrecord, added[:]...)
 	newrecord = append(newrecord, record[6:]...)
+
+	secondprice := cost / sizeback
+	added = []string{
+		fmt.Sprintf("%f", secondprice),
+		fmt.Sprintf("%f", secondprice*sizeback),
+		// fmt.Sprintf("%f", size*price),
+		// fmt.Sprintf("%s", candletime.UTC().Format(requestlayout)),
+	}
+	newrecord = append(newrecord, added[:]...)
 
 	return newrecord
 }
